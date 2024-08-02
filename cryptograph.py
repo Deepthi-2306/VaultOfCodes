@@ -7,48 +7,70 @@ def generate_key():
     return Fernet.generate_key()
 
 def load_key():
-    if os.path.exists('secret.key'):
-        with open('secret.key', 'rb') as key_file:
-            return key_file.read()
-    else:
-        key = generate_key()
-        with open('secret.key', 'wb') as key_file:
-            key_file.write(key)
-        return key
+    try:
+        if os.path.exists('secret.key'):
+            with open('secret.key', 'rb') as key_file:
+                return key_file.read()
+        else:
+            key = generate_key()
+            with open('secret.key', 'wb') as key_file:
+                key_file.write(key)
+            return key
+    except Exception as e:
+        print(f"Error loading or generating key: {e}")
+        exit(1)
 
 def encrypt_message(message, key):
-    fernet = Fernet(key)
-    encrypted_message = fernet.encrypt(message.encode())
-    return encrypted_message
+    try:
+        fernet = Fernet(key)
+        encrypted_message = fernet.encrypt(message.encode())
+        return encrypted_message
+    except Exception as e:
+        print(f"Error encrypting message: {e}")
+        exit(1)
 
 def decrypt_message(encrypted_message, key):
-    fernet = Fernet(key)
-    decrypted_message = fernet.decrypt(encrypted_message).decode()
-    return decrypted_message
+    try:
+        fernet = Fernet(key)
+        decrypted_message = fernet.decrypt(encrypted_message).decode()
+        return decrypted_message
+    except Exception as e:
+        print(f"Error decrypting message: {e}")
+        exit(1)
 
 def load_passwords(key):
-    if os.path.exists('passwords.json'):
-        with open('passwords.json', 'r') as file:
-            encrypted_data = file.read()
-        decrypted_data = decrypt_message(encrypted_data.encode(), key)
-        return json.loads(decrypted_data)
-    else:
+    try:
+        if os.path.exists('passwords.json'):
+            with open('passwords.json', 'r') as file:
+                encrypted_data = file.read()
+            decrypted_data = decrypt_message(encrypted_data.encode(), key)
+            return json.loads(decrypted_data)
+        else:
+            return {}
+    except Exception as e:
+        print(f"Error loading passwords: {e}")
         return {}
 
 def save_passwords(passwords, key):
-    encrypted_data = encrypt_message(json.dumps(passwords), key)
-    with open('passwords.json', 'w') as file:
-        file.write(encrypted_data.decode())
+    try:
+        encrypted_data = encrypt_message(json.dumps(passwords), key)
+        with open('passwords.json', 'w') as file:
+            file.write(encrypted_data.decode())
+    except Exception as e:
+        print(f"Error saving passwords: {e}")
 
 def add_password(passwords, key):
-    site = input("Enter the site name: ")
-    password = input("Enter the password: ")
-    passwords[site] = encrypt_message(password, key).decode()
-    save_passwords(passwords, key)
-    print("Password added successfully.")
+    site = input("Enter the site name: ").strip()
+    password = input("Enter the password: ").strip()
+    if site and password:
+        passwords[site] = encrypt_message(password, key).decode()
+        save_passwords(passwords, key)
+        print("Password added successfully.")
+    else:
+        print("Site name and password cannot be empty.")
 
 def get_password(passwords, key):
-    site = input("Enter the site name: ")
+    site = input("Enter the site name: ").strip()
     if site in passwords:
         encrypted_password = passwords[site].encode()
         password = decrypt_message(encrypted_password, key)
@@ -57,7 +79,7 @@ def get_password(passwords, key):
         print("No password found for this site.")
 
 def delete_password(passwords, key):
-    site = input("Enter the site name to delete: ")
+    site = input("Enter the site name to delete: ").strip()
     if site in passwords:
         del passwords[site]
         save_passwords(passwords, key)
@@ -76,7 +98,7 @@ def main():
         print("3. Delete Password")
         print("4. Exit")
         
-        choice = input("Enter your choice: ")
+        choice = input("Enter your choice: ").strip()
 
         if choice == '1':
             add_password(passwords, key)
@@ -89,4 +111,7 @@ def main():
             break
         else:
             print("Invalid choice. Please try again.")
-main()
+
+if __name__ == "__main__":
+    main()
+
